@@ -1,0 +1,14 @@
+<launch>
+	<!--未知環境導航-->
+	<!--SLAM相關-->
+	<include file="$(find tracer_gazebo_sim)/launch/tracer_slam_gmapping.launch" />
+	<include file="$(find tracer_gazebo_sim)/launch/tracer_octomap.launch" />
+	<!--move_base相關-->
+	<include file="$(find tracer_navigation)/launch/tracer_move_base.launch" />
+	<!--<arg name="open_rviz" default="true"/>
+  	<group if="$(arg open_rviz)"> 
+		<node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find tracer_description)/rviz/navigation_octo.rviz"/>
+	</group>-->
+	
+</launch>
