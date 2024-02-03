@@ -1,0 +1,21 @@
+<launch>
+  <arg name="slam_methods" default="gmapping"/>
+  <arg name="configuration_basename" default="velodyne.lua"/>
+  <arg name="open_rviz" default="true"/>
+  
+<!--####還沒放remote測試####-->
+  <!--<include file="$(find tracer_gazebo_sim)/launch/tracer_remote1.launch">
+    <arg name="model" value="$(arg model)" />
+  </include>-->
+
+
+  <include file="$(find tracer_gazebo_sim)/launch/tracer_gmapping.launch">
+    <!--<arg name="model" value="$(arg model)"/>-->
+    <arg name="configuration_basename" value="$(arg configuration_basename)"/>
+  </include>
+
+  <!-- rviz -->
+  <group if="$(arg open_rviz)"> 
+    <node pkg="rviz" type="rviz" name="rviz" required="true"/>
+  </group>
+</launch>

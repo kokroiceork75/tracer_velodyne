@@ -1,0 +1,12 @@
+<launch>
+	<node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+		<param name="resolution" value="0.1" />
+		<param name="frame_id" type="string" value="/map" />
+		<param name="latch" value="true" />
+		<param name="pointcloud_max_z" value="1.0" />
+		<param name="pointcloud_min_z" value="-0.5" />
+		<remap from="cloud_in" to="/velodyne_points" />
+	</node>
+
+  
+</launch>

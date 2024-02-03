@@ -1,0 +1,54 @@
+<launch>
+
+    <arg name="robot_namespace" default="/"/>
+    <arg name="world_name" default="$(find tracer_gazebo_sim)/worlds/clearpath_playpen.world"/>
+	<arg name="x" default="0.0"/>
+    <arg name="y" default="0.0"/>
+    <arg name="z" default="0.0"/>
+    <arg name="yaw" default="0.0"/>
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    
+        <!--<arg name="world_name" value="$(arg world_name)"/>-->
+        <!--<arg name="world_name" value="$(find tracer_gazebo_sim)/worlds/turtlebot3_house.world"/>-->
+        <arg name="world_name" value="$(find tracer_gazebo_sim)/worlds/2023test.world"/>
+        
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="true"/>
+        <arg name="headless" value="false"/>
+        <arg name="debug" value="false"/>
+    </include>
+	<param name="robot_description" command="$(find xacro)/xacro --inorder $(find tracer_description)/urdf/tracer_v1.xacro" />
+	
+    <!--<include file="$(find tracer_gazebo_sim)/launch/spawn_tracer_v1.launch"></include>-->
+	
+	
+	<node name="spawn_tracer_model" pkg="gazebo_ros" type="spawn_model" args="-x $(arg x)
+              -y $(arg y)
+              -z $(arg z)
+              -Y $(arg yaw)
+              -unpause
+              -urdf
+              -param robot_description
+              -model 'tracer$(arg robot_namespace)'" />
+
+    <rosparam file="$(find tracer_gazebo_sim)/config/tracer_v1_control.yaml" command="load"/>
+
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="tracer_state_controller tracer_motor_r_controller tracer_motor_l_controller "/>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+    <node name="tracer_skid_steer_controller" pkg="tracer_gazebo_sim" type="tracer_skid_steer_controller">
+        <param name="robot_namespace" type="string" value="$(arg robot_namespace)" />
+    </node>
+    
+    <node name="laser_scan_matcher" pkg="laser_scan_matcher" type="laser_scan_matcher_node" output="screen">
+        <param name="fixed_frame" type="string" value="odom"/>
+    </node>
+    
+	<!-- rviz -->
+	<!--<group if="true">
+	  <node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find tracer_description)/rviz/navigation.rviz"/>
+	</group>-->            
+
+</launch>
