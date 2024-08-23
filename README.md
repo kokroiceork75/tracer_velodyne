@@ -3,4 +3,5 @@
 
 改過的tracer結合velodyne VLP-16
 
-create a package named "controller",and path directory is the same with tracer_ros,ugv_sdk,velodyne...
+create a package named "controller",and path directory is the same with tracer_velodyne.
+
