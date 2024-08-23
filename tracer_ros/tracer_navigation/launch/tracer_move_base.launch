@@ -1,11 +1,28 @@
 <launch>
 
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen" clear_params="true">
+      <!-- node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen" -->
+        <param name="base_global_planner" value="global_planner/GlobalPlanner"/> 
+        
+        <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+        <!--
         <rosparam file="$(find tracer_navigation)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
         <rosparam file="$(find tracer_navigation)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find tracer_navigation)/config/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find tracer_navigation)/config/global_costmap_params.yaml" command="load" />
         <rosparam file="$(find tracer_navigation)/config/base_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find tracer_navigation)/config/global_planner_params.yaml" command="load" />
+        -->
+        
+        <rosparam file="$(find tracer_navigation)/p3dx_config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	<rosparam file="$(find tracer_navigation)/p3dx_config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+      <rosparam file="$(find tracer_navigation)/p3dx_config/local_costmap_params.yaml" command="load" />
+      <rosparam file="$(find tracer_navigation)/p3dx_config/global_costmap_params.yaml" command="load" />
+      <rosparam file="$(find tracer_navigation)/p3dx_config/move_base_params.yaml" command="load" />
+      <rosparam file="$(find tracer_navigation)/p3dx_config/base_local_planner_params.yaml" command="load" />
+        
+        
+        <remap from="/cmd_vel" to="cmd_vel_out"/>
     </node>
 
 </launch>
