@@ -2,16 +2,16 @@
 
     <arg name="robot_namespace" default="/"/>
     <arg name="world_name" default="$(find tracer_gazebo_sim)/worlds/clearpath_playpen.world"/>
-	<arg name="x" default="-7.5"/>
-    <arg name="y" default="-9.5"/>
+	<arg name="x" default="-3.0"/>
+    <arg name="y" default="-4.0"/>
     <arg name="z" default="0.0"/>
     <arg name="yaw" default="0.0"/>
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
     
         <!--<arg name="world_name" value="$(arg world_name)"/>-->
         <!--<arg name="world_name" value="$(find tracer_gazebo_sim)/worlds/turtlebot3_house.world"/>-->
-        <!-- <arg name="world_name" value="$(find tracer_gazebo_sim)/worlds/2023test.world"/> -->
-        <arg name="world_name" value="$(find tracer_gazebo_sim)/worlds/maze_wei20240820.world"/>
+        <arg name="world_name" value="$(find tracer_gazebo_sim)/worlds/2023test.world"/> 
+        <!-- <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/maze_20240624.world"/> -->
         
         <arg name="paused" value="false"/>
         <arg name="use_sim_time" value="true"/>

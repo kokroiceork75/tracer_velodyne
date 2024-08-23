@@ -70,5 +70,7 @@
     <!--<arg name="model" value="$(arg model)"/>-->
     <arg name="configuration_basename" value="$(arg configuration_basename)"/>
   </include>
+  <node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find tracer_description)/rviz/navigation_octo.rviz"/>
 
 </launch>

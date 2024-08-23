@@ -11,9 +11,10 @@
         <remap from="cloud_in" to="/velodyne_points" />
 
     </node>
-    <arg name="open_rviz" default="true"/>
+    
+    <!-- <arg name="open_rviz" default="true"/>
     <group if="$(arg open_rviz)"> 
     <node pkg="rviz" type="rviz" name="rviz" required="true"
           args="-d $(find tracer_description)/rviz/navigation_octo.rviz"/>
-  </group>
+  </group> -->
 </launch>
