@@ -48,8 +48,11 @@
   <arg name="device_ip" default="" />
   <arg name="frame_id" default="velodyne" />
   <arg name="manager" default="$(arg frame_id)_nodelet_manager" />
+  
+  <!-- wei change velodyne VLP-16 range -->
   <arg name="max_range" default="130.0" />
-  <arg name="min_range" default="0.4" />
+  <arg name="min_range" default="0.1" />
+  
   <arg name="pcap" default="" />
   <arg name="port" default="2368" />
   <arg name="read_fast" default="false" />
@@ -64,6 +67,7 @@
   <arg name="laserscan_resolution" default="0.007" />
   <arg name="organize_cloud" default="false" />
 
+  <!-- wei change, to add VLP-16 to robot and map the 3D lidar to 2D --> 
   <!-- start nodelet manager and driver nodelets -->
   <include file="$(find velodyne_driver)/launch/nodelet_manager.launch">
     <arg name="device_ip" value="$(arg device_ip)"/>
@@ -100,7 +104,7 @@
     <arg name="ring" value="$(arg laserscan_ring)"/>
     <arg name="resolution" value="$(arg laserscan_resolution)"/>
   </include>
-    
+  <!-- wei change, to add VLP-16 to robot and map the 3D lidar to 2D --> 
 	<!-- rviz -->
 	<!--<group if="true">
 	  <node pkg="rviz" type="rviz" name="rviz" required="true"
