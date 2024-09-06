@@ -169,6 +169,7 @@
         <origin xyz="-0.0218084 ${-wheel_vertical_offset-0.0150} 0" rpy="0 0 0" />
     </xacro:rl_wheel>
     <!--這裡可以改雷射發布topic 名稱-->
+    <!-- this seems decide the lidar position on robot -->
     <xacro:VLP-16 parent="base_link" name="velodyne" topic="/velodyne_points" organize_cloud="${organize_cloud}" hz="10" samples="440" gpu="${gpu}">
     <origin xyz="0.2 0 0.01" rpy="0 0 0" />
     <!--xyz=0 0 0.4original-->
