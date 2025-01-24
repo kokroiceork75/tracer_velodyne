@@ -1,0 +1,7 @@
+scan_filter_chain:
+  - name: angle_filter
+    type: laser_filters/LaserScanAngularBoundsFilter
+    params:
+      lower_angle: -1.57  # 過濾掉 -π/2 到 -π 的數據（後半部分）
+      upper_angle: 1.57   # 過濾掉 π/2 到 π 的數據（後半部分）
+      

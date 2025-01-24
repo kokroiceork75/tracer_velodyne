@@ -1,0 +1,14 @@
+GlobalPlanner:
+  allow_unknown: true
+  default_tolerance: 0.3  # 增加容差
+  visualize_potential: false
+  use_dijkstra: false
+  orientation_mode: 1
+  orientation_window_size: 1
+  publish_potential: true
+  lethal_cost: 253
+  neutral_cost: 50
+  cost_factor: 0.55      # 降低代價因子
+  publish_scale: 100
+  outline_map: true
+  old_navfn_behavior: true  # 使用與 NavfnROS 相似的行為
