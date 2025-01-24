@@ -33,14 +33,14 @@
 /////////////// include 區 //////////////////} 
 
 //////////////////////////////  define區  ///////////////////////////////////////{
+#define load_data_clu "controller/along_wall_controller/10.txt"
+#define load_data_FC "controller/search_target_controller/FUZZY_PID/temp_PID.txt" //important controller.
 
 #define save_distance      "position_random/2easy-distance.txt"  //左/右/前測距離
 #define save_local_target  "position_random/local_target-111.txt"//區域目標
 #define save_local_target_change  "position_random/local_target-change1.txt"//區域目標
 #define save_old "position_random/old_.txt"
 #define save_new "position_random/new_.txt"
-#define load_data_clu "controller/nsga_v1/10.txt"
-#define load_data_FC "controller/search_target_controller/FUZZY_PID/temp_w.txt" //important controller.
 #define position_target    "position_random/position_targetxx.txt"
 //////////////////  演算法參數  /////////////////////{
 
@@ -58,6 +58,7 @@
 
 #define left_wheel_speed 50.0  /* 左輪輪速 */
 #define right_wheel_speed  50.0   /* 右輪輪速  */
+#define desireofwall 0.25 // 希望離牆距離
 
 ///////////////////  速度項目  /////////////////////}
  
@@ -110,7 +111,7 @@ double min_m[_in_varl+1],max_m[_in_varl+1];//最小中心點 & 最大中心點
 double trans_new_amcl;//重要
 double trans_degree;
 double error_z,trans_angle_z;
-const float dis=0.57;
+const float dis=0.3791; // distance of two wheel
 double orientation_z[max_step+1],
        position_x[max_step+1],
        position_y[max_step+1],
@@ -201,18 +202,18 @@ public:
     pub=n.advertise<geometry_msgs::Twist>("/cmd_vel_1",3000); // cmd_vel_1
 
     pub_goal=n.advertise<geometry_msgs::PoseStamped>("/move_base_simple/goal",1);
-    chatter_pub1=n.advertise<std_msgs::Int32>("chatter1",3000);
-    chatter_pub2=n.advertise<std_msgs::Float64>("chatter2",3000);
-    chatter_pub3=n.advertise<std_msgs::Float64>("chatter3",3000);
+    chatter_pub1=n.advertise<std_msgs::Int32>("/chatter1",3000);
+    chatter_pub2=n.advertise<std_msgs::Float64>("/chatter2",3000);
+    chatter_pub3=n.advertise<std_msgs::Float64>("/chatter3",3000);
     
     sub_laser=n.subscribe("/scan",3000,&amcl_pose_sub_pub_1::lasercallback,this);
-    //sub_laser=n.subscribe("/scan",3000,&amcl_pose_sub_pub_1::lasercallback,this);
     sub_final_goal = n.subscribe("/move_base_simple/goal", 3000, &amcl_pose_sub_pub_1::Final_Goal,this);
 
     //subxxx = n.subscribe("/move_base/global_costmap/costmap", 3000,&amcl_pose_sub_pub_1::costmapCallback,this);
 
     //sub_path = n.subscribe("/move_base/DWAPlannerROS/global_plan", 3000, &amcl_pose_sub_pub_1::Path_Callback,this);
-    sub_path = n.subscribe("/move_base/GlobalPlanner/plan", 3000, &amcl_pose_sub_pub_1::Path_Callback,this);
+    // sub_path = n.subscribe("/move_base/GlobalPlanner/plan", 3000, &amcl_pose_sub_pub_1::Path_Callback,this);
+    sub_path = n.subscribe("/move_base/NavfnROS/plan", 3000, &amcl_pose_sub_pub_1::Path_Callback,this);
     sub_amcl = n.subscribe("/move_base/feedback", 3000, &amcl_pose_sub_pub_1::amcl_Callback,this);
     //sub_odom0 = n.subscribe("/odom",3000, &amcl_pose_sub_pub_1::old_Callback,this);
    // sub_odom1 = n.subscribe("/odometry/filtered",3000, &amcl_pose_sub_pub_1::new_Callback,this);
@@ -281,7 +282,7 @@ public:
     angular1 =  info_4->data;
   }
 
-  void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目標的X Y Z 的數值
+  void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目標的X Y Z 的數值存到position_x1, position_y1 and orientation_z1
   {
     position_x1=F_goal->pose.position.x;
     position_y1=F_goal->pose.position.y;
@@ -297,35 +298,7 @@ public:
 	    orientation_z1 = -(orientation_z1 -1.5707) ;  
   }
   
-  // void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal)
-  // {
-  //     position_x1 = F_goal->pose.position.x;
-  //     position_y1 = F_goal->pose.position.y;
-
-  //     tf2::Quaternion s;
-  //     tf2::convert(F_goal->pose.orientation, s);
-  //     tf2::Matrix3x3(s).getRPY(roll_s, pitch_s, yaw_s);
-      
-  //     // 將 yaw 角度從弧度轉換為度
-  //     double yaw_degrees = yaw_s * 180.0 / M_PI;
-
-  //     // 進行座標系轉換
-  //     if (yaw_degrees >= 0 && yaw_degrees <= 90) {
-  //         orientation_z1 = 90 - yaw_degrees;  // 右上象限
-  //     } else if (yaw_degrees > 90 && yaw_degrees <= 180) {
-  //         orientation_z1 = 450 - yaw_degrees; // 左上象限
-  //     } else if (yaw_degrees >= -180 && yaw_degrees < -90) {
-  //         orientation_z1 = -270 - yaw_degrees; // 左下象限
-  //     } else { // -90 <= yaw_degrees < 0
-  //         orientation_z1 = -90 - yaw_degrees;  // 右下象限
-  //     }
-
-  //     // 確保結果在 -180 到 180 度範圍內
-  //     orientation_z1 = fmod(orientation_z1 + 180, 360) - 180;
-
-  //     // 將結果轉回弧度
-  //     orientation_z1 = orientation_z1 * M_PI / 180.0;
-  // }
+ 
   void old_Callback(const nav_msgs::Odometry::ConstPtr& msg){
     double x = msg->pose.pose.position.x;
     double y = msg->pose.pose.position.y;
@@ -354,7 +327,7 @@ public:
     int k;
     for(int i=1;i<=scan->ranges.size();i++)
     {
-				laser_temp_scan[i]=scan->ranges[i]; ///202009 180 to 270
+				laser_temp_scan[i]=scan->ranges[i]; 
 		}
     for (int i = 0; i <= scan->ranges.size(); ++i)
     {
@@ -364,32 +337,16 @@ public:
       {
 				if (laser_temp_scan[i]!=0)
         {
-					laser_temp[angle_deg] = laser_temp_scan[i];
+					laser_temp[angle_deg] = laser_temp_scan[i];  // 將原始雷達過濾並刪減 保留0～360度
 				}
 			}
                 
     }
-		
-
 	}
 
-  // void amcl_Callback(const::move_base_msgs::MoveBaseActionFeedback::ConstPtr & amcl){
-  //   int ll =0;
-  //   amcl_position_x = amcl->feedback.base_position.pose.position.x;
-  //   amcl_position_y = amcl->feedback.base_position.pose.position.y;
-  //   tf2::Quaternion q;
-  //   tf2::convert(amcl->feedback.base_position.pose.orientation,q);
-	//   tf2::Matrix3x3(q).getRPY(roll,pitch,yaw);
-  //   amcl_orientation_z =yaw;
+  
 
-	//   if( amcl_orientation_z <=-1.5707 && amcl_orientation_z>=-3.14159 )
-      
-  //      amcl_orientation_z= -(1.5707+( 3.14159+amcl_orientation_z)); //第四象限為90~180
-     
-  //   else
-	//     amcl_orientation_z = -(amcl_orientation_z -1.5707) ;  
-    
-  // }
+  // 把機器人當前位置存到amcl_position_x, amcl_position_y and amcl_orientation_z
   void amcl_Callback(const::move_base_msgs::MoveBaseActionFeedback::ConstPtr & amcl)
   {
     int ll =0;
@@ -401,15 +358,12 @@ public:
     amcl_orientation_z =yaw;
 
     // 座標系轉換
-	  if( amcl_orientation_z <=-1.5707 && amcl_orientation_z>=-3.14159 )
+	  if( amcl_orientation_z <= -M_PI/2 && amcl_orientation_z >= -M_PI)
       
        amcl_orientation_z= -( 3.14159+1.5707+amcl_orientation_z); //第四象限為90~180
      
     else
 	    amcl_orientation_z = -(amcl_orientation_z -1.5707) ;  
-    
-	  
-    
   }
 
   
@@ -417,7 +371,7 @@ public:
   { 
     double xx1, yy1;
     int i=0;
-    std::vector<geometry_msgs::PoseStamped> data = msg->poses;
+    std::vector<geometry_msgs::PoseStamped> data = msg->poses; // data應該是所有規劃路徑的路徑點
     for(std::vector<geometry_msgs::PoseStamped>::const_iterator it= data.begin(); it!= data.end(); ++it)
     {  
       position_x[i]=msg->poses[i].pose.position.x;
@@ -436,30 +390,27 @@ public:
       //     // 原本的右半平面 (0 到 180) 轉換為新的上半平面 (0 到 -180)
       //     orientation_z[i] = yaw_degrees_g - 180;
       // }
-      if (yaw_degrees_g > -180 && yaw_degrees_g < -90) {
+
+      // 轉換邏輯跟上述其實一樣 ex. amcl_Callback
+      if (yaw_degrees_g >= -180 && yaw_degrees_g <= -90) {
           // 原本的左半平面 (-180 到 0) 轉換為新的下半平面 (180 到 0)
           orientation_z[i] = -(yaw_degrees_g + 270);
-      } else {
+      } 
+      else {
           // 原本的右半平面 (0 到 180) 轉換為新的上半平面 (0 到 -180)
           orientation_z[i] = -(yaw_degrees_g - 90);
-          
       }
-      
-
-
       // 確保角度在 -180 到 180 度範圍內
       if (orientation_z[i] > 180) {
           orientation_z[i] -= 360;
-      } else if (orientation_z[i] <= -180) {
+      } 
+      else if (orientation_z[i] <= -180) {
           orientation_z[i] += 360;
       }
-
-
-	    orientation_z[i] = orientation_z[i] * 3.14159 / 180 ;
+	    orientation_z[i] = orientation_z[i] * M_PI / 180 ;
       local_rms = sqrt(pow(amcl_position_x-position_x[i],2)+pow(amcl_position_y-position_y[i],2));
       if ( local_rms <= 1 - 0.1*fabs(error_orientation_z)/1.5707)
       {
-       
         ik=i;
       }
       i++;
@@ -475,11 +426,9 @@ public:
 		  }  
       for(int ii=10;ii<20;ii++)
         fprintf(pfoutold,"%lf \t %lf\t",position_x[ii],position_y[ii]);
-        fprintf(pfoutold,"\n");
+      fprintf(pfoutold,"\n");
       fclose(pfoutold);
       }
-
-    
       xx1 = position_x[ik];
       yy1 = position_y[ik];
 
@@ -509,48 +458,40 @@ public:
   }
  
   void fuzzy_in(int jj)
-{ 
-
+  { 
     if (error_position_y==0) error_z = 0;
     // else error_z = atan2(error_position_x , error_position_y);
-    else error_z =atan(abs(error_position_x/error_position_y));
+    else error_z = atan(abs(error_position_x/error_position_y));
     
-    trans_angle_z = error_z*180/3.14159 ; 
-    
-    trans_new_amcl =amcl_orientation_z;
-
-     
+    trans_angle_z = error_z * 180 / M_PI ; 
+    trans_new_amcl = amcl_orientation_z;
     //用X、Y分量差位置判別角度差    四個象限對應到的角度與向量軸有差異->>>atan()無法轉換時無法判別分子/母正負 手動調整角度,以符合實際.
     if ( error_position_x>0 && error_position_y >0)   trans_angle_z =  trans_angle_z;
     else if( error_position_x<0 && error_position_y >0)  trans_angle_z = -trans_angle_z;
     else if( error_position_x<0 && error_position_y <0)  trans_angle_z = -180+trans_angle_z;
     else if( error_position_x>0 && error_position_y <0)  trans_angle_z =  180-trans_angle_z; 	
     
-   // 車頭方向 - 位置的角度差 = 車頭需要旋轉的角度 ,判別左旋轉或右旋轉較小的的角度
-    if ((trans_angle_z > 90) && (trans_new_amcl*180/3.14158) <-90) {
-      trans_degree = -360+abs(trans_angle_z)+abs(trans_new_amcl*180/3.14159) ;
+  // 車頭方向 - 位置的角度差 = 車頭需要旋轉的角度 ,判別左旋轉或右旋轉較小的的角度
+    if ((trans_angle_z > 90) && (trans_new_amcl*180/M_PI) <-90) {
+      trans_degree = -360+abs(trans_angle_z)+abs(trans_new_amcl*180/M_PI) ;
         cout<<"!1111111111111111111111111111"<<endl;
     } 
-    else if ((trans_angle_z <-90) && (trans_new_amcl*180/3.14158) >90) {
-      trans_degree = 360-abs(trans_angle_z)-abs(trans_new_amcl*180/3.14159) ;
+    else if ((trans_angle_z <-90) && (trans_new_amcl*180/M_PI) >90) {
+      trans_degree = 360-abs(trans_angle_z)-abs(trans_new_amcl*180/M_PI) ;
       cout<<"!2222222222222222222222222222222222"<<endl;
-   
+  
     }
-    else trans_degree = (trans_angle_z - trans_new_amcl*180/3.14159);
+    else trans_degree = (trans_angle_z - trans_new_amcl*180/M_PI);
 
-
-
-
-      cout<<"trans_degree=   "<<  trans_degree<<endl;
-
-      
-     error_orientation_z = trans_degree*3.14159/180 ;   
-    if(abs(error_orientation_z)>3.14159) 
+    cout<<"trans_degree=   "<<  trans_degree<<endl;
+    error_orientation_z = trans_degree*M_PI/180 ;   
+    if(abs(error_orientation_z)>M_PI) 
     {
       cout<<"this is bigger than 3.14159 "<<endl;
       cout<<"befor transfer angular is ="<<error_orientation_z<<endl;
-      if (error_orientation_z>0 && left_min>0.5) error_orientation_z = -6.28 + error_orientation_z;
-      else if (error_orientation_z<0 && right_min>0.5) error_orientation_z = 6.28 + error_orientation_z;
+      // wei change 20250121 not sure
+      if (error_orientation_z>0 && left_min>0.57) error_orientation_z = -2 * M_PI + error_orientation_z;
+      else if (error_orientation_z<0 && right_min>0.57) error_orientation_z = 2 * M_PI + error_orientation_z;
       cout<<"after transfer angular is == "<<error_orientation_z<<endl;
     }        
     
@@ -558,8 +499,9 @@ public:
     sum_error = sqrt(pow(position_x[ik]-amcl_position_x,2)+pow(position_y[ik]-amcl_position_y,2));
 
     Error_orientation_z[jj] = error_orientation_z;
-    in[1] = abs(error_orientation_z)/3.14159;
-    in[2] = abs(Error_orientation_z[jj]-Error_orientation_z[jj-1])/3.14159; 
+    in[1] = abs(error_orientation_z)/M_PI;
+    in[2] = abs(Error_orientation_z[jj]-Error_orientation_z[jj-1])/M_PI; 
+    // training is 0.5, not sure
     in[3] = sum_error/1.5; 
     cout<<" in[1]= "<< in[1]<<endl;
 
@@ -568,7 +510,7 @@ public:
     cout<<" in[3]= "<< in[3]<<endl;
 
 
-}
+  }
 
 ///////////////// Fuzzy系統:把感測器的讀值做正規化 ///////////////////}
 void decideRotation( int &kkk){
@@ -583,63 +525,109 @@ void decideRotation( int &kkk){
 
   straight_min = minimun(165,195,k);
 
-  margin_laser[0] = 0.553;///202012
-  margin_laser[5] = 0.5551;//-0.05是因為被遮住，避免誤會碰撞
-  margin_laser[10] = 0.5615;
-  margin_laser[15] = 0.5725;
-  margin_laser[20] = 0.4746-0.05;
-  margin_laser[25] = 0.4921-0.05;
-  margin_laser[30] = 0.5150-0.05;
-  margin_laser[35] = 0.4969-0.05;
-  margin_laser[40] = 0.4434;
-  margin_laser[45] = 0.4031;
-  margin_laser[50] = 0.3720-0.05;
-  margin_laser[55] = 0.3479-0.05;
-  margin_laser[60] = 0.3291-0.05;
-  margin_laser[65] = 0.3145-0.05;
-  margin_laser[70] = 0.3033-0.05;
-  margin_laser[75] = 0.2951-0.05;
-  margin_laser[80] = 0.2894-0.05;
-  margin_laser[85] = 0.2861-0.05;
-  margin_laser[90] = 0.285;
-  margin_laser[95] = 0.2861;
-  margin_laser[100] = 0.2894;
-  margin_laser[105] = 0.2951;
-  margin_laser[110] = 0.3033;
-  margin_laser[115] = 0.3145;
-  margin_laser[120] = 0.264;
-  margin_laser[125] = 0.2301;
-  margin_laser[130] = 0.2054;
-  margin_laser[135] = 0.1867;
-  margin_laser[140] = 0.1723;
-  margin_laser[145] = 0.1611;
-  margin_laser[150] = 0.1524;
-  margin_laser[155] = 0.1456;
-  margin_laser[160] = 0.1405;
-  margin_laser[165] = 0.1367;
-  margin_laser[170] = 0.1340;
-  margin_laser[175] = 0.1325;
-  margin_laser[180] = 0.132;
-  margin_laser[185] = 0.1325;
-  margin_laser[190] = 0.1340;
-  margin_laser[195] = 0.1367;
-  margin_laser[200] = 0.1405;
-  margin_laser[205] = 0.1456;
-  margin_laser[210] = 0.1524;
-  margin_laser[215] = 0.1611;
-  margin_laser[220] = 0.1723;
-  margin_laser[225] = 0.1867;
-  margin_laser[230] = 0.2054;
-  margin_laser[235] = 0.2301;
-  margin_laser[240] = 0.264;
-  margin_laser[245] = 0.3145;
-  margin_laser[250] = 0.3033;
-  margin_laser[255] = 0.2951;
-  margin_laser[260] = 0.2894;
-  margin_laser[265] = 0.2861;
-  margin_laser[269] = 0.285;
-  margin_laser[270] = 0.285;
-
+  // margin_laser[0] = 0.;
+  // margin_laser[5] = 0.;
+  // margin_laser[10] = 0.;
+  // margin_laser[15] = 0.;
+  // margin_laser[20] = 0.;
+  // margin_laser[25] = 0.;
+  // margin_laser[30] = 0.;
+  // margin_laser[35] = 0.;
+  // margin_laser[40] = 0.;
+  // margin_laser[45] = 0.;
+  // margin_laser[50] = 0.;
+  // margin_laser[55] = 0.;
+  // margin_laser[60] = 0.;
+  // margin_laser[65] = 0.;
+  // margin_laser[70] = 0.;
+  // margin_laser[75] = 0.;
+  // margin_laser[80] = 0.;
+  // margin_laser[85] = 0.;
+  // margin_laser[90] = 0.2817; // wei change Tracer20240909
+  // margin_laser[95] = 0.2867;
+  // margin_laser[100] = 0.2946;
+  // margin_laser[105] = 0.2844;
+  // margin_laser[110] = 0.2942;
+  // margin_laser[115] = 0.2997;
+  // margin_laser[120] = 0.2980;
+  // margin_laser[125] = 0.2703;
+  // margin_laser[130] = 0.2301;
+  // margin_laser[135] = 0.1991;
+  // margin_laser[140] = 0.1729;
+  // margin_laser[145] = 0.1879;
+  // margin_laser[150] = 0.1756;
+  // margin_laser[155] = 0.1532;
+  // margin_laser[160] = 0.1435;
+  // margin_laser[165] = 0.1600;
+  // margin_laser[170] = 0.1601;
+  // margin_laser[175] = 0.1643;
+  // margin_laser[180] = 0.1665;
+  // margin_laser[185] = 0.1471;
+  // margin_laser[190] = 0.1667;
+  // margin_laser[195] = 0.1609;
+  // margin_laser[200] = 0.1548;
+  // margin_laser[205] = 0.1574;
+  // margin_laser[210] = 0.1808;
+  // margin_laser[215] = 0.1698;
+  // margin_laser[220] = 0.1850;
+  // margin_laser[225] = 0.2039;
+  // margin_laser[230] = 0.2214;
+  // margin_laser[235] = 0.2622;
+  // margin_laser[240] = 0.2838;
+  // margin_laser[245] = 0.3248;
+  // margin_laser[250] = 0.3081;
+  // margin_laser[255] = 0.3019;
+  // margin_laser[260] = 0.3102;
+  // margin_laser[265] = 0.2806;
+  // margin_laser[270] = 0.2981;
+  // margin_laser[269] = 0.2945;
+  margin_laser[35] = 0.49207; // wei change Tracer20250109
+  margin_laser[40] = 0.44073; 
+  margin_laser[45] = 0.40190; 
+  margin_laser[50] = 0.37247; 
+  margin_laser[310] = 0.37247; 
+  margin_laser[315] = 0.40190; 
+  margin_laser[320] = 0.44073; 
+  margin_laser[325] = 0.49207; 
+  
+  margin_laser[90] = 0.29010;
+  margin_laser[95] = 0.29170;
+  margin_laser[100] = 0.29562;
+  margin_laser[105] = 0.30188;
+  margin_laser[110] = 0.31096;
+  margin_laser[115] = 0.31017;
+  margin_laser[120] = 0.26386;
+  margin_laser[125] = 0.23164;
+  margin_laser[130] = 0.20743;
+  margin_laser[135] = 0.18912;
+  margin_laser[140] = 0.17525;
+  margin_laser[145] = 0.16425;
+  margin_laser[150] = 0.15581;
+  margin_laser[155] = 0.14915;
+  margin_laser[160] = 0.14418;
+  margin_laser[165] = 0.14049;
+  margin_laser[170] = 0.13806;
+  margin_laser[175] = 0.13670;
+  margin_laser[180] = 0.13641;
+  margin_laser[185] = 0.13715;
+  margin_laser[190] = 0.13898;
+  margin_laser[195] = 0.14192;
+  margin_laser[200] = 0.14617;
+  margin_laser[205] = 0.15179;
+  margin_laser[210] = 0.15924;
+  margin_laser[215] = 0.16863;
+  margin_laser[220] = 0.18088;
+  margin_laser[225] = 0.19669;
+  margin_laser[230] = 0.21694;
+  margin_laser[235] = 0.24445;
+  margin_laser[240] = 0.28163;
+  margin_laser[245] = 0.31727;
+  margin_laser[250] = 0.30667;
+  margin_laser[255] = 0.29880;
+  margin_laser[260] = 0.29361;
+  margin_laser[265] = 0.29069;
+  margin_laser[269] = 0.29005;
+  margin_laser[270] = 0.29005;
   
   for(int lsr=90;lsr<=165;lsr=lsr+5){
     if(laser_temp[lsr] < margin_laser[lsr]  && laser_temp[lsr] >= 0.15){
@@ -721,34 +709,34 @@ void decideRotation( int &kkk){
       cout<<" out_y[1]= "<< out_y[1]<<endl;
       cout<<" out_y[2]= "<< out_y[2]<<endl;
       speed_limit();
-      v1=out_y[1]*0.03*1;
+      v1=out_y[1]*0.03*1;  // 0.03 is radius of wheel
       v2=out_y[2]*0.03*1;
 
       cout<<"v1= "<<v1<<endl;
       cout<<"v2= "<<v2<<endl;
       msg.linear.x = ((v1+v2)/2);
       msg.angular.z =((v2-v1)/dis);
-
-     if(msg.linear.x >0.6) msg.linear.x =0.6;
-     if (msg.angular.z >0.85 ) msg.angular.z=0.85;
-     else if (msg.angular.z < -0.85)
-      msg.angular.z= -0.85;
+    // wei change, 20250115 max_linear: 1.5 m/s, max_angular: 7.91 rad/s
+     if(msg.linear.x >1.3) msg.linear.x =1.3;
+     if (msg.angular.z >7.8 ) msg.angular.z=7.8;
+     else if (msg.angular.z < -7.5)
+      msg.angular.z= -7.5;
 	    pub.publish(msg);
     }    
     
-    else 
+    else  // 撞到
     { 
 
       Tp=0;  
       intergral=0;
 
-      if(straight_min <= safe_distance )
+      if(straight_min <= margin_laser[180] + desireofwall)
       {
       
          if (status==2 )
           {
             msg.angular.z=0.5;
-            msg.linear.x=0;
+            msg.linear.x=-0.5;
             pub.publish(msg); 
             printf("\n距離過近 向左旋轉\n");
           }
@@ -756,13 +744,13 @@ void decideRotation( int &kkk){
           else if(status ==3)
           {
             msg.angular.z = -0.5;
-            msg.linear.x=0;
+            msg.linear.x=-0.5;
             pub.publish(msg); 
             printf("\n距離過近 向右旋轉\n");
           }        
       }
 
-      else if (left_min < safe_distance && right_min < safe_distance)
+      else if (left_min < margin_laser[270] + desireofwall && right_min < margin_laser[90] + desireofwall)
       {
         
         if (status==2 )
@@ -782,25 +770,24 @@ void decideRotation( int &kkk){
         }        
     
       }
-      else if (left_min <= safe_distance)
+      else if (left_min <= margin_laser[270] + desireofwall)
       {
         if(straight_min > safe_distance)
         { 
           msg.angular.z=-0.5;
           msg.linear.x= 0.;
           pub.publish(msg);
-          printf("\n距離過近 向右前方旋轉\n");
+          printf("\n距離過近 右轉\n");
         }
       }
-      else if (right_min <= safe_distance)
+      else if (right_min <= margin_laser[90] + desireofwall)
       {
         if(straight_min > safe_distance)
         { 
           msg.angular.z= 0.5;
-          msg.linear.x= 0.3;
           msg.linear.x= 0.;
           pub.publish(msg);
-          printf("\n距離過近 向左前方旋轉\n");
+          printf("\n距離過近 左轉\n");
         }
       }
       
@@ -946,29 +933,28 @@ int j,k ;
 
 void fuzzy(int _rule ) 
 {
-int i , j;
-double den[_out_varl+1] ,   //分母項
-       num[_out_varl+1] ;   //分子項
+  int i , j;
+  double den[_out_varl+1] ,   //分母項
+        num[_out_varl+1] ;   //分子項
 
- for (j=1; j<=_out_varl; j++)
- {
-  den[j] = 0. ;  //初始化歸零
-  num[j] = 0. ;  //初始化歸零
-   
-   for (i=1; i<=_rule; i++)
-   {
-   num[j] = num[j] + _Rule[i].in_mu_1 * _Rule[i].con[j];  //num為sigma的寫法
-   den[j] = den[j] + _Rule[i].in_mu_1 ;   //den為sigma的寫法
+  for (j=1; j<=_out_varl; j++)
+  {
+    den[j] = 0. ;  //初始化歸零
+    num[j] = 0. ;  //初始化歸零
+    
+    for (i=1; i<=_rule; i++)
+    {
+      num[j] = num[j] + _Rule[i].in_mu_1 * _Rule[i].con[j];  //num為sigma的寫法
+      den[j] = den[j] + _Rule[i].in_mu_1 ;   //den為sigma的寫法
+    }
 
-   }
-
-   if ( fabs(den[j]) < 1E-8 )
-   K[j] = 0 ;     //如果den很小時
-   else
-   K[j] = num[j]/den[j] ;  //權重式平均法
- }
- 
-//   for (int kk=1; kk<=_out_varl; kk++) printf("den[%d]=%lf \t num=%lf\n",kk,den[kk],num[kk]);
+    if ( fabs(den[j]) < 1E-8 )
+      K[j] = 0 ;     //如果den很小時
+    else
+      K[j] = num[j]/den[j] ;  //權重式平均法
+  }
+  
+  //   for (int kk=1; kk<=_out_varl; kk++) printf("den[%d]=%lf \t num=%lf\n",kk,den[kk],num[kk]);
 }
 //////////////////////// 解模糊 ///////////////////////////}
 

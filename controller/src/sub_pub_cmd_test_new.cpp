@@ -83,12 +83,12 @@ public:
    cmd_sub_pub()
    {
       pub = n.advertise<geometry_msgs::Twist>("/cmd_vel",3000);
-      x1_pub=n.advertise<std_msgs::Float64>("data_x1",3000);
-      y1_pub=n.advertise<std_msgs::Float64>("data_y1",3000);
-      x2_pub=n.advertise<std_msgs::Float64>("data_x2",3000);
-      y2_pub=n.advertise<std_msgs::Float64>("data_y2",3000);
-      pub_1=n.advertise<std_msgs::Float64>("info_1",3000);
-      pub_2=n.advertise<std_msgs::Int32>("info_2",3000);
+      x1_pub=n.advertise<std_msgs::Float64>("/data_x1",3000);
+      y1_pub=n.advertise<std_msgs::Float64>("/data_y1",3000);
+      x2_pub=n.advertise<std_msgs::Float64>("/data_x2",3000);
+      y2_pub=n.advertise<std_msgs::Float64>("/data_y2",3000);
+      pub_1=n.advertise<std_msgs::Float64>("/info_1",3000);
+      pub_2=n.advertise<std_msgs::Int32>("/info_2",3000);
       
       //pub = n.advertise<geometry_msgs::Twist>("/RosAria/cmd_velx",3000);
       sub_laser=n.subscribe("/scan",3000, &cmd_sub_pub::callback,this);
@@ -96,8 +96,8 @@ public:
       sub_1 = n.subscribe("/cmd_vel_1",3000, &cmd_sub_pub::speed_Search, this);
       sub_2 = n.subscribe("/cmd_vel_2",3000, &cmd_sub_pub::speed_Along_wall, this);
       sub_goal = n.subscribe("/move_base_simple/goal",3000, &cmd_sub_pub::Search_Target, this);
-      sub_info1 =n.subscribe("chatter1",3000, &cmd_sub_pub::chatter1Callback,this);
-      sub_info2 =n.subscribe("chatter2",3000, &cmd_sub_pub::chatter2Callback,this);
+      sub_info1 =n.subscribe("/chatter1",3000, &cmd_sub_pub::chatter1Callback,this);
+      sub_info2 =n.subscribe("/chatter2",3000, &cmd_sub_pub::chatter2Callback,this);
       sub_amcl = n.subscribe("/move_base/feedback", 3000, &cmd_sub_pub::amcl_Callback,this);
     
      
@@ -159,119 +159,91 @@ public:
    void decision_path(double i, double j, double k ,int jj)
    {  
       int js=315;
-      // margin_laser[0] = 0.553;///202012
-      // margin_laser[5] = 0.5551;//-0.05是因為被遮住，避免誤會碰撞
-      // margin_laser[10] = 0.5615;
-      // margin_laser[15] = 0.5725;
-      // margin_laser[20] = 0.4746-0.05;
-      // margin_laser[25] = 0.4921-0.05;
-      // margin_laser[30] = 0.5150-0.05;
-      // margin_laser[35] = 0.4969-0.05;
-      // margin_laser[40] = 0.4434;
-      // margin_laser[45] = 0.4031;
-      // margin_laser[50] = 0.3720-0.05;
-      // margin_laser[55] = 0.3479-0.05;
-      // margin_laser[60] = 0.3291-0.05;
-      // margin_laser[65] = 0.3145-0.05;
-      // margin_laser[70] = 0.3033-0.05;
-      // margin_laser[75] = 0.2951-0.05;
-      // margin_laser[80] = 0.2894-0.05;
-      // margin_laser[85] = 0.2861-0.05;
-      // margin_laser[90] = 0.285;
-      // margin_laser[95] = 0.2861;
-      // margin_laser[100] = 0.2894;
-      // margin_laser[105] = 0.2951;
-      // margin_laser[110] = 0.3033;
-      // margin_laser[115] = 0.3145;
-      // margin_laser[120] = 0.264;
-      // margin_laser[125] = 0.2301;
-      // margin_laser[130] = 0.2054;
-      // margin_laser[135] = 0.1867;
-      // margin_laser[140] = 0.1723;
-      // margin_laser[145] = 0.1611;
-      // margin_laser[150] = 0.1524;
-      // margin_laser[155] = 0.1456;
-      // margin_laser[160] = 0.1405;
-      // margin_laser[165] = 0.1367;
-      // margin_laser[170] = 0.1340; // wei change for avoid
-      // margin_laser[175] = 0.1325;
-      // // margin_laser[180] = 0.132;
-      // margin_laser[180] = 0.319627;
-      // margin_laser[185] = 0.1325;
-      // margin_laser[190] = 0.1340;  // wei change for avoid
-      // margin_laser[195] = 0.1367;
-      // margin_laser[200] = 0.1405;
-      // margin_laser[205] = 0.1456;
-      // margin_laser[210] = 0.1524;
-      // margin_laser[215] = 0.1611;
-      // margin_laser[220] = 0.1723;
-      // margin_laser[225] = 0.1867;
-      // margin_laser[230] = 0.2054;
-      // margin_laser[235] = 0.2301;
-      // margin_laser[240] = 0.264;
-      // margin_laser[245] = 0.3145;
-      // margin_laser[250] = 0.3033;
-      // margin_laser[255] = 0.2951;
-      // margin_laser[260] = 0.2894;
-      // margin_laser[265] = 0.2861;
-      // margin_laser[269] = 0.285;
-      // margin_laser[270] = 0.285;
-      margin_laser[0] = 0.553;///202012
-      margin_laser[5] = 0.5551;//-0.05是因為被遮住，避免誤會碰撞
-      margin_laser[10] = 0.5615;
-      margin_laser[15] = 0.5725;
-      margin_laser[20] = 0.4746-0.05;
-      margin_laser[25] = 0.4921-0.05;
-      margin_laser[30] = 0.5150-0.05;
-      margin_laser[35] = 0.4969-0.05;
-      margin_laser[40] = 0.4434;
-      margin_laser[45] = 0.4031;
-      margin_laser[50] = 0.3720-0.05;
-      margin_laser[55] = 0.3479-0.05;
-      margin_laser[60] = 0.3291-0.05;
-      margin_laser[65] = 0.3145-0.05;
-      margin_laser[70] = 0.3033-0.05;
-      margin_laser[75] = 0.2951-0.05;
-      margin_laser[80] = 0.2894-0.05;
-      margin_laser[85] = 0.2861-0.05;
-      margin_laser[90] = 0.3060;
-      margin_laser[95] = 0.3136;
-      margin_laser[100] = 0.3111;
-      margin_laser[105] = 0.3267;
-      margin_laser[110] = 0.3508;
-      margin_laser[115] = 0.3609;
-      margin_laser[120] = 0.3623;
-      margin_laser[125] = 0.3702;
-      margin_laser[130] = 0.3603;
-      margin_laser[135] = 0.3776;
-      margin_laser[140] = 0.4526;   // lidar disable start
-      margin_laser[145] = 0.4078;
-      margin_laser[150] = 0.3869;
-      margin_laser[155] = 0.3836;
-      margin_laser[160] = 0.3516;
-      margin_laser[165] = 0.3423;
-      margin_laser[170] = 0.3319; 
-      margin_laser[175] = 0.3413;
-      margin_laser[180] = 0.3420;
-      margin_laser[185] = 0.3389;
-      margin_laser[190] = 0.3337;  
-      margin_laser[195] = 0.3343;
-      margin_laser[200] = 0.3466;
-      margin_laser[205] = 0.3712;
-      margin_laser[210] = 0.4001;
-      margin_laser[215] = 0.3932;
-      margin_laser[220] = 0.4472;
-      margin_laser[225] = 0.4534;  // lidar disable end
-      margin_laser[230] = 0.2054;
-      margin_laser[235] = 0.2301;
-      margin_laser[240] = 0.264;
-      margin_laser[245] = 0.3145;
-      margin_laser[250] = 0.3033;
-      margin_laser[255] = 0.2951;
-      margin_laser[260] = 0.2894;
-      margin_laser[265] = 0.2861;
-      margin_laser[269] = 0.285;
-      margin_laser[270] = 0.285;
+      margin_laser[35] = 0.49207; // wei change Tracer20250109
+      margin_laser[40] = 0.44073; 
+      margin_laser[45] = 0.40190; 
+      margin_laser[50] = 0.37247; 
+      margin_laser[310] = 0.37247; 
+      margin_laser[315] = 0.40190; 
+      margin_laser[320] = 0.44073; 
+      margin_laser[325] = 0.49207; 
+      
+      margin_laser[90] = 0.29010;
+      margin_laser[95] = 0.29170;
+      margin_laser[100] = 0.29562;
+      margin_laser[105] = 0.30188;
+      margin_laser[110] = 0.31096;
+      margin_laser[115] = 0.31017;
+      margin_laser[120] = 0.26386;
+      margin_laser[125] = 0.23164;
+      margin_laser[130] = 0.20743;
+      margin_laser[135] = 0.18912;
+      margin_laser[140] = 0.17525;
+      margin_laser[145] = 0.16425;
+      margin_laser[150] = 0.15581;
+      margin_laser[155] = 0.14915;
+      margin_laser[160] = 0.14418;
+      margin_laser[165] = 0.14049;
+      margin_laser[170] = 0.13806;
+      margin_laser[175] = 0.13670;
+      margin_laser[180] = 0.13641;
+      margin_laser[185] = 0.13715;
+      margin_laser[190] = 0.13898;
+      margin_laser[195] = 0.14192;
+      margin_laser[200] = 0.14617;
+      margin_laser[205] = 0.15179;
+      margin_laser[210] = 0.15924;
+      margin_laser[215] = 0.16863;
+      margin_laser[220] = 0.18088;
+      margin_laser[225] = 0.19669;
+      margin_laser[230] = 0.21694;
+      margin_laser[235] = 0.24445;
+      margin_laser[240] = 0.28163;
+      margin_laser[245] = 0.31727;
+      margin_laser[250] = 0.30667;
+      margin_laser[255] = 0.29880;
+      margin_laser[260] = 0.29361;
+      margin_laser[265] = 0.29069;
+      margin_laser[269] = 0.29005;
+      margin_laser[270] = 0.29005;
+      // margin_laser[90] = 0.2817; // wei change Tracer20240909
+      // margin_laser[95] = 0.2867;
+      // margin_laser[100] = 0.2946;
+      // margin_laser[105] = 0.2844;
+      // margin_laser[110] = 0.2942;
+      // margin_laser[115] = 0.2997;
+      // margin_laser[120] = 0.2980;
+      // margin_laser[125] = 0.2703;
+      // margin_laser[130] = 0.2301;
+      // margin_laser[135] = 0.1991;
+      // margin_laser[140] = 0.1729;
+      // margin_laser[145] = 0.1879;
+      // margin_laser[150] = 0.1756;
+      // margin_laser[155] = 0.1532;
+      // margin_laser[160] = 0.1435;
+      // margin_laser[165] = 0.1600;
+      // margin_laser[170] = 0.1601;
+      // margin_laser[175] = 0.1643;
+      // margin_laser[180] = 0.1665;
+      // margin_laser[185] = 0.1471;
+      // margin_laser[190] = 0.1667;
+      // margin_laser[195] = 0.1609;
+      // margin_laser[200] = 0.1548;
+      // margin_laser[205] = 0.1574;
+      // margin_laser[210] = 0.1808;
+      // margin_laser[215] = 0.1698;
+      // margin_laser[220] = 0.1850;
+      // margin_laser[225] = 0.2039;
+      // margin_laser[230] = 0.2214;
+      // margin_laser[235] = 0.2622;
+      // margin_laser[240] = 0.2838;
+      // margin_laser[245] = 0.3248;
+      // margin_laser[250] = 0.3081;
+      // margin_laser[255] = 0.3019;
+      // margin_laser[260] = 0.3102;
+      // margin_laser[265] = 0.2806;
+      // margin_laser[270] = 0.2981;
+      // margin_laser[269] = 0.2945;
 
       p[jj]=0;
       int ln=0;
@@ -282,28 +254,29 @@ public:
       rms= sqrt(pow(rms_x,2)+pow(rms_y,2));
       for(int lsr=90;lsr<=180;lsr=lsr+5){
          // if(laser_temp[lsr] < margin_laser[lsr]  && laser_temp[lsr] >= 0.15){  wei change 
-         if(laser_temp[lsr] < margin_laser[lsr]){
+         if(laser_temp[lsr] <= margin_laser[lsr] + 0.1)
+         {
             p[jj] =1; ////尋標
             ln=1; ////離牆太近
-            printf("HITTTTTTTTTTTTTTTTTTTTT\n");
+            printf("almost HITTTTTTTTTTTTTTTTTTTTT\n");
             printf("限制：觸碰最小距離: %lf\t 角度：%d\n",margin_laser[lsr],lsr);
             printf("右側車子最小距離：%lf\n",right_min); 
          }
       }
       for(int lsr=180;lsr<=270;lsr=lsr+5){
          // if( laser_temp[lsr]< margin_laser[lsr] && laser_temp[lsr] >= 0.15){ wei change
-         if( laser_temp[lsr]< margin_laser[lsr]){
-             p[jj] =1; ////尋標
+         if( laser_temp[lsr]<= margin_laser[lsr] + 0.1){
+            p[jj] =1; ////尋標
             ln=1; ////離牆太近
-            printf("HITTTTTTTTTTTTTTTTTTTTT\n");
+            printf("almost HITTTTTTTTTTTTTTTTTTTTT\n");
             printf("限制：觸碰最小距離: %lf\t 角度：%d\n",margin_laser[lsr],lsr);
             printf("左側車子最小距離：%lf\n",left_min);
          }
       }
       for(int lsr=165;lsr<=195;lsr=lsr+5){
          // if(laser_temp[lsr]<margin_laser[lsr] && laser_temp[lsr] >= 0.15){  wei change
-         if(laser_temp[lsr]<margin_laser[lsr]){
-             p[jj] =1; ////尋標
+         if(laser_temp[lsr] <= margin_laser[lsr] + 0.1){
+            p[jj] =1; ////尋標
             ln=1; ////離牆太近
             printf("HITTTTTTTTTTTTTTTTTTTTT\n");
             printf("限制：觸碰最小距離: %lf\t 角度：%d\n",margin_laser[lsr],lsr);
@@ -313,70 +286,63 @@ public:
       
 
       
-      if (status==1 && (left_min<0.5 || right_min<0.5) && ln!=1) { ///朝前方移動時候,考慮兩側是否有障礙物
-     
-         if( left_min<=0.5 )
+      if (status==1 && (left_min<0.585 || right_min<0.585) && ln!=1) 
+      { ///朝前方移動時候,考慮兩側是否有障礙物  wei change from 0.5 to 0.585 
+         if( left_min<=0.585 )
          {
             printf("左前方區域有障礙物，左沿牆 \t ststus = %d\n",status);
             cout<<"11111111111111111111"<<endl;
          }
-         else if ( right_min<=0.5 )
+         else if ( right_min<=0.585 )
          {
             printf("右前方區域有障礙物，右沿牆 \t ststus = %d\n",status);
             cout<<"22222222222222222222222"<<endl;
          }
          p[jj]=2;
       }
-      
-     
-      else if(  (status ==2 && left_min<=0.5) && ln!=1) { ///朝前方移動時候,考慮兩側是否有障礙物
-      
+      else if(  (status ==2 && left_min<=0.585) && ln!=1) { ///朝前方移動時候,考慮兩側是否有障礙物
          printf("左前方影障礙,左沿牆 \t status = %d\n",status);
          p[jj]=2;
-       
       }
-      else if( (status ==3 && right_min<=0.5) && ln!=1) { ///朝前方移動時候,考慮兩側是否有障礙物
-
-
+      else if( (status ==3 && right_min<=0.585) && ln!=1) { ///朝前方移動時候,考慮兩側是否有障礙物
          printf("右前方有障礙物,右沿牆 \t status = %d\n",status);
          p[jj]=2;
-       
       }
-      else{ 
+      else
+      { 
          cout<<"staus= "<<status<<endl;
          p[jj]=1;
-      
       } 
      if( (straight_min < 0.6 && straight_min > 0.3)  && p[jj]==1 && ln!=1 ) 
-      
       {
-         vel_s = vel_s*0.5;
-         angular_s = angular_s*0.5;
+         vel_s = vel_s*1;
+         angular_s = angular_s*1;
          cout<<"========60％％％％speed========="<<endl;
       }
       if (p[jj]==1)
       {     
          ss=1;
-        
-         msg.linear.x=vel_s*0.6;   // wei change from 0.8 to ?
-         msg.angular.z=angular_s*0.6; // wei change from 0.8 to ?
+         HH = 0;
+         msg.linear.x=vel_s*0.8;   // wei change from 0.8 to ?
+         msg.angular.z=angular_s*0.8; // wei change from 0.8 to ?
          pub.publish(msg);
          ROS_INFO("Search Target: cmd_vel_1" );
          publisher_info(jj);
          printf("left_min=%f \t right_min=%f \t straight_min=%f\t \n",left_min,right_min,straight_min); 
          printf("\n(linear,angular):(%lf ,%lf) \n",msg.linear.x,msg.angular.z);
-         }
-      else if (p[jj]==2){
-          
+      }
+      else if (p[jj]==2)
+      { 
          ss=0;
+         HH = 1;
          msg.linear.x=vel_a*0.8; // wei change from 0.8 to ?
-         msg.angular.z=angular_a*1.5; // wei change from 0.9 to ?
+         msg.angular.z=angular_a*0.8; // wei change from 0.9 to ?
          integral =0;
          pub.publish(msg);
          ROS_INFO("Along_wall : cmd_vel_2");
          printf("left_min=%f \t right_min=%f \t straight_min=%f\t \n",left_min,right_min,straight_min);  
          printf("\n(linear,angular)(%lf ,%lf) \n",msg.linear.x,msg.angular.z);  
-         }
+      }
 
    }
 
@@ -575,10 +541,14 @@ int main(int argc,char ** argv)
       obj.decision_path(right_min, left_min,straight_min,counts);
       obj.publisher_info(counts);
       obj.save_info(counts);
-      if ( msg.linear.x ==0 & msg.angular.z==0 && counts>100 ){
-         cout<<"in the end "<<endl;
-          obj.stop();
-      }
+      // if ( msg.linear.x ==0 & msg.angular.z==0 && counts>100 ){
+      //    cout<<"in the end "<<endl;
+      //     obj.stop();
+      // }
+      if (msg.linear.x == 0 && msg.angular.z == 0 && counts > 100 && sqrt(pow(amcl_position_x - target_position_x, 2) + pow(amcl_position_y - target_position_y, 2)) < 0.1) {
+      cout << "in the end" << endl;
+      obj.stop();
+   }
        
 		ros::spinOnce();
       ros::Duration(0.01).sleep();

@@ -30,10 +30,11 @@ int _in_clu;//FC rules
 #define _rule_delta 10
 #define _input_scale 1.0   //20200416   
 #define PI 3.14159    
-#define r 0.05
-#define tran r*2*PI/60
 #define left_wheel_speed 4  //如果控制器的後件部s有正規化則要*最高速
-#define max_speed 50.0
+#define max_speed 50.0  //  wei change
+#define robot_margin 0.285
+#define dis_to_wall 0.25
+#define radius 0.03
 //////////////////////////////  define區  /////////////////////////////////////////
 // #define load_data_clu "controller/20211027/2/clu.txt"
 // #define load_data_FC "controller/20211027/2/Final_new.txt"
@@ -41,21 +42,20 @@ int _in_clu;//FC rules
 // #define load_data_FC "controller/20220105/Ev2/Final_new_19.txt"
 //#define load_data_clu "controller/20220209/Ev2/_in_clu_19.txt"
 //#define load_data_FC "controller/20220209/Ev2/Final_first_19.txt"
-#define load_data_clu "controller/nsga_v1/10.txt"
+#define load_data_clu "controller/along_wall_controller/10.txt"
 
 //#define load_data_FC "controller/20230502/wall.txt"
 //#define load_data_clu "controller/20230712/20230712experirments/MEFRL(simulation2)/_in_clu.txt"
 //#define load_data_FC "controller/20230712/20230712experirments/MEFRL(simulation2)/s.txt"
 
-#define load_data_FC "controller/nsga_v1/temp_w_50.txt"  // wei change for max speed = 50.0
-// #define load_data_FC "controller/nsga_v1/temp_w1.txt"  // wei for max speed = 15.6
-//#define load_data_FC "controller/20221118/test.txt"
+// #define load_data_FC "controller/nsga_v1/temp_w1.txt"  // wei change for max speed = 15.6
+#define load_data_FC "controller/along_wall_controller/temp_w12.txt"  // wei for max speed = 50.0
 // #define load_data_clu "controller/20210803/1/clu.txt"
 // #define load_data_FC "controller/20210803/1/Final_first_pos.dat"
 //#define save_wall "controller/20230502/wall.txt"
 //#define save_vel "controller/20230502/vel.txt"
-#define save_ave_vel "controller/nsga_v1/save_ave_speed.txt"
-#define save_ave_error "controller/nsga_v1/save_ave_dis_error.txt" 
+#define save_ave_vel "position_random/save_ave_speed.txt"
+#define save_ave_error "position_random/save_ave_dis_error.txt" 
 //#define save_data_path1  "save/along_wall.txt" 
 
 //////////////////////////////  變數宣告區  ///////////////////////////////////////{
@@ -75,7 +75,8 @@ float far=5;
 //const float PI=3.14;
 const float x=9;
 
-const float dis= 0.57; // wei change width
+// const float dis= 0.57; // wei change width of Tracer
+const float dis= 0.379; // wei change distance between two wheels
 
 double ave_speed=0.0;
 float ave_distance_error=0;
@@ -163,38 +164,24 @@ class controller{
 ////////////////////////////////////////////  Constructor  //////////////////////////////////////////////	
 		controller(){
 
-			x1_pub=n.advertise<std_msgs::Float64>("data_x1",3000);
-			y1_pub=n.advertise<std_msgs::Float64>("data_y1",3000);
+			x1_pub=n.advertise<std_msgs::Float64>("/data_x1",3000);
+			y1_pub=n.advertise<std_msgs::Float64>("/data_y1",3000);
 			sub_final_goal = n.subscribe("/move_base_simple/goal", 3000, &controller::Final_Goal,this);
 		    sub=n.subscribe("/scan",3000,&controller::callback,this);
 			//sub=n.subscribe("/scan",3000,&controller::callback,this);
-	    	pub_data1=n.advertise<std_msgs::Float64>("data1",3000);
-			pub_data2=n.advertise<std_msgs::Float64>("data2",3000);
+	    	pub_data1=n.advertise<std_msgs::Float64>("/data1",3000);
+			pub_data2=n.advertise<std_msgs::Float64>("/data2",3000);
 			sub_amcl = n.subscribe("/move_base/feedback", 3000, &controller::amcl_Callback,this);	
 			//pub=n.advertise<geometry_msgs::Twist>("/3_2",3000);
 
     		pub=n.advertise<geometry_msgs::Twist>("/cmd_vel_2",3000); //cmd_vel_2
 
 			//sub_orientation =n.subscribe("chatter1",3000, &controller::chatter1Callback,this);
-			sub_info1 =n.subscribe("chatter1",3000, &controller::chatterCallback,this);
+			sub_info1 =n.subscribe("/chatter1",3000, &controller::chatterCallback,this);
 		}
 ////////////////////////////////////////////  Constructor  //////////////////////////////////////////////	
-// void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目標的X Y Z 的數值
-//   {
-//     position_x1=F_goal->pose.position.x;
-//     position_y1=F_goal->pose.position.y;
-//     //orientation_z1=F_goal->pose.orientation.z;
-// 	tf2::Quaternion s;
-//   	tf2::convert(F_goal->pose.orientation,s);
-// 	tf2::Matrix3x3(s).getRPY(roll_s,pitch_s,yaw_s);
-// 	orientation_z1=yaw_s;
-     
-//     if( orientation_z1 <=-1.5707 && orientation_z1>=-3.14159 )
-// 	    orientation_z1= -(1.5707+( 3.14159+orientation_z1)); //第四象限為90~180
-//     else
-// 	    orientation_z1 = -(orientation_z1 -1.5707) ;  
-//   }
-void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目標的X Y Z 的數值
+
+void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目標的X Y Z 的數值 wei change
   {
     position_x1=F_goal->pose.position.x;
     position_y1=F_goal->pose.position.y;
@@ -225,18 +212,7 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
       
 
    }
-		// void callback(const sensor_msgs::LaserScan::ConstPtr& scan){
-		// 	int k;
-		// 	for(int i=1;i<=360;i++){//180
-		// 		laser_temp[i]=scan->ranges[i]; ///202009 180 to 270
-
-		// 	}	
-        //    left_min=minimun(210,270,k);
-
-		//    right_min=minimun(90,150,k);
-
-		//    stright_min=minimun(150,210,k);
-		// }
+		
 		void callback(const sensor_msgs::LaserScan::ConstPtr& scan) //wei change,not sure
 		{
 			int k;
@@ -256,150 +232,144 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 						}
 			}		
 			}
-           left_min=minimun(195,269,k);
-		   right_min=minimun(90,165,k);
+           left_min=minimun(180,269,k);
+		   right_min=minimun(90,180,k);
 		   stright_min=minimun(165,195,k);
 		}
-		void decision_(int j){	
+		void decision_(int j)
+		{	
 			double xx1,xx2;
-			if (stright_min<=0.5 || left_min<=0.5 || right_min<=0.5){
-				if (left_min<=0.5){
+			// if (stright_min<=0.5 || left_min<=0.5 || right_min<=0.5){ wei change
+			if (stright_min <= 0.4 || left_min <= 0.57 || right_min <= 0.57){
+				if (left_min <= 0.57){
 					decision_left = 1;
 					decision_right= 0;
 				}
-				else if (right_min<=0.5){
+				else if (right_min <= 0.57){
 					decision_left = 0;
 					decision_right= 1;
 				
 				}
-			    else if (left_min<right_min && left_min <0.5){
+			    else if (left_min < right_min){
 					decision_left = 1;
 					decision_right= 0;
 				}
-				else if (left_min>right_min && right_min<0.5){
+				else if (left_min > right_min){
 					decision_left = 0;
 					decision_right= 1;
 				}
 			}
-		
-			 if (status==1){
-				
-				 if ( left_min <=0.5 ) 
+			// this status is published by odom_new.cpp, 1: stright, 2: left, 3: right
+			if (status==1)
+			{
+				if (left_min <= 0.57) 
 				{
 					decision_left = 1;
 					decision_right = 0;
 				}
-				else if( right_min <= 0.5){
+				else if(right_min <= 0.57)
+				{
 					decision_left = 0;
 					decision_right = 1;
 				}
 			}
-
-		    else if(right_min < 0.5 && laser_temp[270] > 0.5 )// && laser_temp[90] < 0.7)// && decision_left == 0  )
+		    else if(right_min < 0.57 && laser_temp[270] > 0.5)// && laser_temp[90] < 0.7)// && decision_left == 0  )
 			{	
 			 	decision_right = 1;
 				decision_left  = 0;
-			
 			}
-			else if(left_min <0.5 && laser_temp[90]> 0.5)// && laser_temp[270] < 0.7 )//&& decision_right == 0 )
+			else if(left_min < 0.57 && laser_temp[90] > 0.5)// && laser_temp[270] < 0.7 )//&& decision_right == 0 )
 		    {
 				decision_left = 1;
 				decision_right= 0;
-				
 			}
 		
-			if(decision_left == 1 ){	
-			std::cout << "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL" << std::endl;
-			printf("left_min:  %lf\n",left_min);
-			printf("right_min:  %lf\n",right_min);
-
-			read_1 = laser_temp[192] ;
-			read_2 = laser_temp[218] ;
-			read_3 = laser_temp[232] ;
-			read_4 = laser_temp[261] ;
-			read_5 = laser_temp[270] ;
-			read_6 = laser_temp[180] ;
-
-			for(size_t i = 180; i < 200; i++)//25
-			{	if(read_1>laser_temp[i])
-				read_1=std::min(laser_temp[i],far);
-			}
-			//printf("%d\n",1);
-
-			for(size_t i = 200; i < 225; i++)//20
-			{	if(read_2>laser_temp[i])
-				read_2=std::min(laser_temp[i],far);
-			}
-			//printf("%d\n",2);
-			for(size_t i = 225; i < 245; i++)//25
-			{	if(read_3>laser_temp[i])
-				read_3=std::min(laser_temp[i],far);
-			}
-			//printf("%d\n",3);
-			for(size_t i = 245; i < 270; i++)//20
-			{	if(read_4>laser_temp[i])
-				read_4=std::min(laser_temp[i],far);
-			}
-			//printf("%d\n",4);
-			for(size_t i = 90; i <= 270; i++)
-			{	if(read_5>laser_temp[i])
-				read_5=std::min(laser_temp[i],far);
-			}			
-			//printf("%d\n",5);
-			for(size_t i = 90; i <= 180; i++)//175 180
-			{	if(read_6>laser_temp[i])
-				read_6=std::min(laser_temp[i],far);
-			}
-			printf("left_along_wall\n");
-			}
-			if(decision_right == 1){
-			std::cout << "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR" << std::endl;
-			read_1 = laser_temp[158] ;
-			read_2 = laser_temp[137] ;
-			read_3 = laser_temp[122] ;
-			read_4 = laser_temp[105] ;
-			read_5 = laser_temp[180] ;
-			read_6 = laser_temp[1] ;
-
-			for(size_t i = 160; i <179; i++)//25
-			{	if(read_1>laser_temp[i])
-				read_1=std::min(laser_temp[i],far);
-			}
-			//printf("%d\n",1);
-
-			for(size_t i = 135; i < 160; i++)//20
-			{	if(read_2>laser_temp[i])
-				read_2=std::min(laser_temp[i],far);
-			}
-			//printf("%d\n",2);
-			for(size_t i = 115; i < 135; i++)//25
-			{	if(read_3>laser_temp[i])
-				{
-				read_3=std::min(laser_temp[i],far);
-				}	
-			}
-			//printf("%d\n",3);
-			for(size_t i = 90; i < 115; i++)//20
-			{	if(read_4>laser_temp[i]){
-				
-				read_4=std::min(laser_temp[i],far);
+			if(decision_left == 1 )
+			{	
+				std::cout << "mode: LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL" << std::endl;
+				printf("left_min:  %lf\n",left_min);
+				printf("right_min:  %lf\n",right_min);
+				read_1 = laser_temp[190] ;
+				read_2 = laser_temp[210] ;
+				read_3 = laser_temp[230] ;
+				read_4 = laser_temp[260] ;
+				read_5 = laser_temp[265] ;
+				read_6 = laser_temp[265] ;
+				for(size_t i = 180; i < 200; i++)//25
+				{	if(read_1>laser_temp[i])
+						read_1=std::min(laser_temp[i],far);
 				}
-			}
-			//printf("%d\n",4);
-			for(size_t i = 90; i <=270; i++)
-			{	if(read_5>laser_temp[i])
-				read_5=std::min(laser_temp[i],far);
-			}			
-			//printf("%d\n",5);
-			for(size_t i = 90; i <= 180; i++)//175 180
-			{	if(read_6>laser_temp[i])
-				read_6=std::min(laser_temp[i],far);
-			}
-			 printf("right_along_wall\n");	
+				//printf("%d\n",1);
 
-		}
-		//for(int i=1)
-		//	cout<<<<endl;
+				for(size_t i = 200; i < 225; i++)//20
+				{	if(read_2>laser_temp[i])
+						read_2=std::min(laser_temp[i],far);
+				}
+				//printf("%d\n",2);
+				for(size_t i = 225; i < 245; i++)//25
+				{	if(read_3>laser_temp[i])
+						read_3=std::min(laser_temp[i],far);
+				}
+				//printf("%d\n",3);
+				for(size_t i = 245; i < 270; i++)//20
+				{	if(read_4>laser_temp[i])
+						read_4=std::min(laser_temp[i],far);
+				}
+				//printf("%d\n",4);
+				for(size_t i = 90; i <= 270; i++)
+				{	if(read_5>laser_temp[i])
+						read_5=std::min(laser_temp[i],far);
+				}			
+				//printf("%d\n",5);
+				for(size_t i = 180; i <= 270; i++)//175 180
+				{	if(read_6>laser_temp[i])
+						read_6=std::min(laser_temp[i],far);
+				}
+				printf("left_along_wall\n");
+			}
+			if(decision_right == 1)
+			{
+				std::cout << "mode: RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR" << std::endl;
+				read_1 = laser_temp[170] ;
+				read_2 = laser_temp[140] ;
+				read_3 = laser_temp[120] ;
+				read_4 = laser_temp[95] ;
+				read_5 = laser_temp[95] ;
+				read_6 = laser_temp[95] ;
+
+				for(size_t i = 160; i <179; i++)//25
+				{	if(read_1>laser_temp[i])
+						read_1=std::min(laser_temp[i],far);
+				}
+				//printf("%d\n",1);
+
+				for(size_t i = 135; i < 160; i++)//20
+				{	if(read_2>laser_temp[i])
+						read_2=std::min(laser_temp[i],far);
+				}
+				//printf("%d\n",2);
+				for(size_t i = 115; i < 135; i++)//25
+				{	if(read_3>laser_temp[i])
+						read_3=std::min(laser_temp[i],far);	
+				}
+				//printf("%d\n",3);
+				for(size_t i = 90; i < 115; i++)//20
+				{	
+					if(read_4>laser_temp[i])
+						read_4=std::min(laser_temp[i],far);
+				}
+				//printf("%d\n",4);
+				for(size_t i = 90; i <=270; i++)
+				{	if(read_5>laser_temp[i])
+						read_5=std::min(laser_temp[i],far);
+				}			
+				//printf("%d\n",5);
+				for(size_t i = 90; i <= 180; i++)//175 180
+				{	if(read_6>laser_temp[i])
+						read_6=std::min(laser_temp[i],far);
+				}
+				printf("right_along_wall\n");	
+			}
 		}
 				
 ///////////////////////////////  get distance value from different angles from sensor  ///////////////////////
@@ -408,7 +378,8 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 	
 
 ////////////////////////////////////  Output cmd_velocity  ////////////////////////////////////
-		void test_run(int j){
+		void test_run(int j)
+		{
 			geometry_msgs::Twist msg;				
 			// v1=tran*out_y[2];
 			// v2=tran*out_y[1];
@@ -417,12 +388,12 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 			// msg.linear.x =x*(v1+v2)/2;
 			// msg.angular.z=x*(v1-v2)/dis;
 			if(decision_left == 1 ){
-			v1 = out_y[1]*0.03*0.7;
-			v2 = out_y[2]*0.03*0.7;
+			v1 = out_y[1] * radius * 1;  // 0.03 is radius of wheel
+			v2 = out_y[2] * radius * 1;
 			}
 			if(decision_right == 1 ){
-			 v1 = out_y[2]*0.03*0.7;
-			 v2 = out_y[1]*0.03*0.7;
+			 v1 = out_y[2] * radius * 1;
+			 v2 = out_y[1] * radius * 1;
 			}
 		
 			//printf("linear=%lf\n",(v1+v2)/2);
@@ -441,11 +412,18 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 				msg.angular.z = (v1-v2)/dis;
 
 			}*/
-			msg.linear.x =(v1+v2)/2 ;
-			if((v1-v2)/dis > 1. )  msg.angular.z = 1.; 
-			else if ((v1-v2)/dis <-1.) msg.angular.z =-1.;
+			// msg.linear.x = (v1+v2)/2 ;
+			// max linear speed is 1.5 m/s
+			if(((v1+v2)/2) > 1.3)
+				msg.linear.x = 1.3;
+			else if(((v1+v2)/2) < -(1.3))
+				msg.linear.x = -1.3;
 			else
-			 msg.angular.z = (v1-v2)/dis;
+				msg.linear.x = (v1+v2)/2;
+			// max speed of turn is 7.91 rad/s
+			if((v1-v2)/dis > 7.8 )  msg.angular.z = 7.8;  // avoid that turn around too fast
+			else if ((v1-v2)/dis <-7.8) msg.angular.z =-7.8;
+			else msg.angular.z = (v1-v2)/dis;
 			pub.publish(msg);
      
 			//if (((v1+v2)/2)==0 && (v1-v2)/dis==0 && decision_left==1) msg.angular.z = -0.2;
@@ -456,8 +434,6 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 			printf("linear=%lf\n",msg.linear.x);
 			printf("angular=%lf\n",msg.angular.z);
 			pub.publish(msg);
-////////////////////////////////////  Output cmd_velocity  ////////////////////////////////////
-
 //////////////////////////////////// Record the average speed /////////////////////////////////				
 			/*FILE *pfout;
 			pfout=fopen(save_vel,"a");//"controller/20210701/vel.txt"
@@ -475,27 +451,26 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
          status =  info1->data;
    		}
 		
-		void publisher_info(int jj ) //印出訊息並傳遞數值給其他程式從pub1~pub10;
+		void publisher_info(int jj ) //印出訊息並傳遞數值給其他程式從pub1~pub10; 
   		{        
-    	std_msgs::Float64 info1,info2;
-    	info1.data = (v1+v2)/2;  //車子與目標的角度差
-    	info2.data = (v1-v2)/dis;              //經過轉換後的機器人Z軸角度
-  
-    	pub_data1.publish(info1); 
-    	pub_data2.publish(info2);
-  		}
+			std_msgs::Float64 info1,info2;
+			// notice: two "info1" in this code are different
+			info1.data = (v1+v2)/2;  //車子與目標的角度差
+			info2.data = (v1-v2)/dis;              //經過轉換後的機器人Z軸角度
+	
+			pub_data1.publish(info1); 
+			pub_data2.publish(info2);
+		}
 
-		void test_open(){
-
+		void test_open()
+		{
 			for(int ssss=1; ssss<=_in_varl; ssss++)
 			{
 					min_m[ssss]=1.0;  //為了找最小值，所以初始的最小值令為1，即為"最大"的最小值。
 					max_m[ssss]=0.0;  //為了找最大值，所以初始的最大值令為0，即為"最小"的最大值。		
 			////-1~1之間的中心點範圍 
 			//max_m[ber][ssss]=0.0;  //為了找最大值，所以初始的最大值令為-1，即為"最小"的最大值。        
-					
 			}
-			 
 			FILE *fnoise1,*fnoise0;  
 			printf("read file\n");		
 			if((fnoise0=fopen(load_data_clu,"r"))==NULL)
@@ -505,24 +480,21 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 			}
 			fscanf(fnoise0,"%d", &_in_clu);
 			fclose(fnoise0);
-			
 			if((fnoise1=fopen(load_data_FC,"r"))==NULL)
 			{
 				printf("Nothing2\n");
 				exit(1);
 			}
-			for(int i=1;i<=_mem_length*_in_clu;i++)
+			for(int i=1; i <= _mem_length*_in_clu; i++)
 			{
 				fscanf(fnoise1,"%Lf \n", &fuzzy_real[i]);
 				//printf("check%Lf\t",fuzzy_real[i]);
 			}  
-
 			fclose(fnoise1);  
-
 			for(int jj=1; jj<=_rule_delta; jj++)
 			{
 				for(int jjj=1; jjj<=_in_varl; jjj++)
-					{   
+				{   
 					if(fuzzy_real[(jj-1)*_mem_length+jjj*2-1] < min_m[jjj])
 					{   
 						min_m[jjj]=fuzzy_real[(jj-1)*_mem_length+jjj*2-1];
@@ -549,8 +521,8 @@ void Final_Goal(const geometry_msgs::PoseStamped::ConstPtr & F_goal) //全域目
 			sick_wall[jj] = read_6;
 			if(jj>=5){
 	
-				ave_distance_error = ave_distance_error + fabs(read_6-0.35);
-				printf("distance_error == %f\n",fabs(read_6-0.35));
+				ave_distance_error = ave_distance_error + fabs(read_6 - robot_margin - dis_to_wall);
+				printf("distance_error == %f\n",fabs(read_6 - robot_margin - dis_to_wall));
 			}
 			robot_vel[jj] =out_y[1]+out_y[2]; //功能:左輪+右輪的輪速
 
@@ -790,15 +762,13 @@ int main(int argc,char ** argv)
     controller ctrl;
 	//ros::Rate a(100);  
 	
-	while(counts<max_step && ros::ok())
+	while(counts < max_step && ros::ok())
 	{
 
 		
-			counts++;
-		
+		counts++;
 		printf("counts:%d\n",counts);
 		//ros::spinOnce();
-		
 		ctrl.test_open(); //to get max and min
 		ctrl.decision_(counts);
 		ctrl.get_sensor(counts) ;
