@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 設置參數 -->
+    <param name="/use_sim_time" value="false"/>
+    
+    <!-- 設置機器人描述參數 -->
+    <param name="robot_description" 
+           command="$(find xacro)/xacro $(find tracer_description)/urdf/tracer_v1.xacro 
+                   organize_cloud:=false gpu:=false" />
+
+    <!-- 啟動 Tracer 機器人基礎節點 -->
+    <include file="$(find tracer_bringup)/launch/tracer_robot_base.launch"/>
+
+    <!-- 等待確保 base 節點完全啟動 -->
+    <arg name="wait_base_node" default="2.0" />
+    <node pkg="rostopic" type="rostopic" name="wait_base_node"
+          args="hz /odom" launch-prefix="bash -c 'sleep $(arg wait_base_node); $0 $@'" />
+
+    <!-- 啟動 Velodyne LiDAR -->
+    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
+        <arg name="frame_id" value="velodyne"/>
+        <!-- 如果需要可以添加其他 Velodyne 參數 -->
+        <arg name="device_ip" value="192.168.1.201"/> <!-- 請確認您的 Velodyne IP -->
+    </include>
+
+    <!-- 設定靜態 TF 轉換（從 base_link 到 velodyne） -->
+    <!-- 使用與 URDF 中相同的位置 -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_velodyne" 
+          args="0.2075 0 0.01 0 0 0 base_link velodyne" />
+
+    <!-- 等待確保 TF 和雷達數據準備就緒 -->
+    <arg name="wait_for_transform" default="3.0" />
+    <node pkg="rostopic" type="rostopic" name="wait_for_transform"
+          args="hz /velodyne_points" launch-prefix="bash -c 'sleep $(arg wait_for_transform); $0 $@'" />
+    
+    <node pkg="laser_filters" type="scan_to_scan_filter_chain" name="laser_filter">
+	  <rosparam command="load" file="$(find tracer_navigation)/config/laser_filter.yaml" />
+	  <remap from="scan" to="/scan" />  <!-- 輸入話題 -->
+	  <remap from="scan_filtered" to="/scan_filtered" />  <!-- 輸出話題 -->
+	</node>
+<!-- <rosparam file="$(find tracer_navigation)/p3dx_config/costmap_common_params.yaml" command="load" ns="global_costmap" /> -->
+    <!-- 啟動 Tracer 導航節點 -->
+    <!-- <include file="$(find tracer_navigation)/launch/tracer_navigation_auto.launch"/> -->
+
+</launch>
